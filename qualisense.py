@@ -18,24 +18,26 @@ from concurrent.futures import ThreadPoolExecutor
 import nltk
 import os
 
-# Create NLTK data directory if it doesn't exist
-nltk_data_dir = os.path.expanduser('~/nltk_data')
-os.makedirs(nltk_data_dir, exist_ok=True)
-
-# Set NLTK data path
-nltk.data.path.append(nltk_data_dir)
-
-# Download punkt if needed
+# Initialize NLTK data
 try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
+    import ssl
     try:
-        nltk.download('punkt', download_dir=nltk_data_dir, quiet=True)
-    except Exception as e:
-        st.error(f"Error downloading NLTK data: {str(e)}")
-        # Fallback tokenizer function
-        def sent_tokenize(text):
-            return text.split('.')
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+    else:
+        ssl._create_default_https_context = _create_unverified_https_context
+    
+    nltk_data_dir = '/app/nltk_data'
+    if not os.path.exists(nltk_data_dir):
+        os.makedirs(nltk_data_dir)
+    
+    nltk.data.path.append(nltk_data_dir)
+    nltk.download('punkt', download_dir=nltk_data_dir)
+except Exception as e:
+    st.warning(f"NLTK initialization warning: {str(e)}")
+    def sent_tokenize(text):
+        return text.split('.')
 
 @st.cache_data(ttl=3600)
 def extract_text(file_content, file_type):
