@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="QualiSense-AI", page_icon="🔍", layout="wide")
+st.set_page_config(layout="wide")
 
 from openai import OpenAI
 import pandas as pd
@@ -16,7 +16,6 @@ import json
 from collections import Counter
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
 def tokenize_text(text):
     """Simple tokenizer using basic punctuation."""
     return [s.strip() + '.' for s in text.replace('!', '.').replace('?', '.').split('.') if s.strip()]
@@ -174,26 +173,14 @@ def create_visualizations(code_data, relationship_data, co_occurrence_matrix, te
     ).update_layout(height=600)
     visualizations.append(sunburst)
     
-    # High-resolution Word Cloud
+    # Word Cloud
     text_for_cloud = ' '.join(code_data['code'].astype(str))
-    wc = WordCloud(
-        width=1600, 
-        height=800, 
-        background_color='white',
-        colormap='viridis',
-        max_words=150,
-        min_word_length=2,
-        prefer_horizontal=0.7,
-        relative_scaling=0.5,
-        min_font_size=10,
-        max_font_size=120,
-        random_state=42
-    ).generate(text_for_cloud)
-    
-    fig_wc = plt.figure(figsize=(20, 10), dpi=300)
+    wc = WordCloud(width=800, height=400, background_color='white', colormap='viridis', 
+                  max_words=100, min_word_length=2).generate(text_for_cloud)
+    fig_wc = plt.figure(figsize=(10, 5))
     plt.imshow(wc, interpolation='bilinear')
     plt.axis('off')
-    plt.title('Word Frequency Analysis', pad=20, size=16)
+    plt.title('Word Frequency Analysis')
     visualizations.append(fig_wc)
     
     # Heatmap
@@ -256,146 +243,48 @@ def create_empty_figure(message="No data available"):
     )
 
 def main():
-    st.title("QualiSense-AI")
+    st.title("Qualitative Data Analysis Tool")
     
-    st.markdown("""
-        <style>
-        .main { padding: 2rem; }
-        .stTitle {
-            font-size: 3rem !important;
-            color: #1E3D59 !important;
-            margin-bottom: 2rem !important;
-        }
-        .info-box {
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 10px;
-            border-left: 5px solid #1E3D59;
-            margin-bottom: 2rem;
-        }
-        .st-emotion-cache-1v0mbdj > img { width: 100px; }
-        .upload-section {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            border-radius: 10px;
-            background-color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .stButton>button {
-            width: 100%;
-            margin-top: 1rem;
-            background-color: #1E3D59;
-            color: white;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    api_key = st.secrets.get("OPENAI_API_KEY") or st.text_input("Enter OpenAI API key:", type="password")
+    if not api_key:
+        st.warning("Please enter an API key to continue.")
+        return
 
-    st.markdown("""
-        <div class='info-box'>
-        <h2>Advanced Qualitative Data Analysis Platform</h2>
-        <p>QualiSense-AI leverages cutting-edge AI to provide deep insights from your qualitative data:</p>
-        <ul>
-            <li><strong>Automated Analysis:</strong> Advanced theme extraction and pattern recognition</li>
-            <li><strong>Visual Insights:</strong> Interactive visualizations and relationship mapping</li>
-            <li><strong>Multi-format Support:</strong> PDF, DOCX, and TXT file analysis</li>
-            <li><strong>Comprehensive Reports:</strong> Detailed Excel reports with key metrics</li>
-        </ul>
-        </div>
-    """, unsafe_allow_html=True)
+    client = OpenAI(api_key=api_key)
     
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("<div class='upload-section'>", unsafe_allow_html=True)
-        api_key = st.secrets.get("OPENAI_API_KEY") or st.text_input(
-            "Enter OpenAI API key:",
-            type="password",
-            help="Your API key will be used securely and not stored"
-        )
-        
-        if not api_key:
-            st.warning("Please enter an API key to continue.")
-            st.markdown("</div>", unsafe_allow_html=True)
-            return
-
-        client = OpenAI(api_key=api_key)
-        
-        uploaded_files = st.file_uploader(
-            "Upload your documents for analysis",
-            type=['pdf', 'docx', 'txt'],
-            accept_multiple_files=True,
-            help="Select up to 7 files to analyze"
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-            <div style='background-color: #e9ecef; padding: 1.5rem; border-radius: 10px;'>
-                <h4 style='color: #1E3D59;'>📄 Supported Formats</h4>
-                <ul style='list-style-type: none; padding-left: 0;'>
-                    <li>📌 PDF Documents (.pdf)</li>
-                    <li>📌 Word Documents (.docx)</li>
-                    <li>📌 Text Files (.txt)</li>
-                </ul>
-                <div style='margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6;'>
-                    <small>
-                        <strong>Limits:</strong><br>
-                        • Maximum 7 files<br>
-                        • 12MB per file
-                    </small>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+    uploaded_files = st.file_uploader("Upload documents (max 7)", type=['pdf', 'docx', 'txt'], accept_multiple_files=True)
     
     if uploaded_files:
         if len(uploaded_files) > 7:
             st.error("Maximum 7 files allowed.")
             return
-        
-        analyze_button = st.button(
-            "🔍 Start Analysis",
-            type="primary",
-            help="Click to begin processing your documents"
-        )
-        
-        if analyze_button:
+            
+        if st.button("Analyze"):
             progress = st.progress(0)
             status = st.empty()
             
             try:
                 texts = []
-                for idx, file in enumerate(uploaded_files):
+                for file in uploaded_files:
                     if file.size > 12 * 1024 * 1024:
                         st.error(f"File {file.name} exceeds 12MB limit.")
                         return
                     texts.append(extract_text(file.read(), file.name.split('.')[-1].lower()))
-                    progress.progress((idx + 1) / len(uploaded_files) * 0.3)
                 
                 chunks = chunk_text("\n".join(texts))
-                status.text("🔍 Analyzing content...")
-                progress.progress(0.4)
+                status.text("Analyzing chunks...")
                 
                 async def run_analysis():
                     analyses = await analyze_chunks(client, chunks)
                     return analyses
                 
                 analyses = asyncio.run(run_analysis())
-                progress.progress(0.7)
-                
                 code_data, relationship_data, co_occurrence = merge_analyses(analyses)
                 
-                status.text("📊 Creating visualizations...")
-                progress.progress(0.9)
-                
+                status.text("Creating visualizations...")
                 visualizations = create_visualizations(code_data, relationship_data, co_occurrence, "\n".join(texts))
                 
-                tabs = st.tabs([
-                    "📊 Code Distribution",
-                    "🎯 Theme Analysis",
-                    "☁️ Word Frequency",
-                    "🔄 Co-Occurrence",
-                    "🔍 Network Analysis"
-                ])
+                tabs = st.tabs(["Coding", "Themes", "Word Frequency", "Co-Occurrence", "Triangulation"])
                 
                 for tab, viz in zip(tabs, visualizations):
                     with tab:
@@ -422,21 +311,19 @@ def main():
                         summary_data.to_excel(writer, 'Analysis Summary', index=False)
                     
                     st.download_button(
-                        "📥 Download Complete Analysis",
+                        "Download Complete Analysis",
                         buffer.getvalue(),
-                        "QualiSense_Analysis_Report.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        help="Download a comprehensive Excel report of all analyses"
+                        "qualitative_analysis_results.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
                 
-                status.text("✅ Analysis complete!")
+                status.text("Analysis complete!")
                 progress.empty()
                 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
-                status.text("❌ Analysis failed!")
+                status.text("Analysis failed!")
                 progress.empty()
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="QualiSense-AI", page_icon="🔍", layout="wide")
     main()
