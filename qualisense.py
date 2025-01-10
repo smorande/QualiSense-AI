@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(layout="wide")
+
 from openai import OpenAI
 import pandas as pd
 import numpy as np
@@ -17,10 +19,10 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import nltk
 import os
+import ssl
 
 # Initialize NLTK data
 try:
-    import ssl
     try:
         _create_unverified_https_context = ssl._create_unverified_context
     except AttributeError:
@@ -39,6 +41,7 @@ except Exception as e:
     def sent_tokenize(text):
         return text.split('.')
 
+# Existing functions remain unchanged
 @st.cache_data(ttl=3600)
 def extract_text(file_content, file_type):
     try:
@@ -259,8 +262,7 @@ def create_empty_figure(message="No data available"):
         annotations=[{"text": message, "showarrow": False, "font": {"size": 20}}]
     )
 
-async def main():
-    st.set_page_config(layout="wide")
+def main():
     st.title("Qualitative Data Analysis Tool")
     
     api_key = st.secrets.get("OPENAI_API_KEY") or st.text_input("Enter OpenAI API key:", type="password")
@@ -292,7 +294,11 @@ async def main():
                 chunks = chunk_text("\n".join(texts))
                 status.text("Analyzing chunks...")
                 
-                analyses = await analyze_chunks(client, chunks)
+                async def run_analysis():
+                    analyses = await analyze_chunks(client, chunks)
+                    return analyses
+                
+                analyses = asyncio.run(run_analysis())
                 code_data, relationship_data, co_occurrence = merge_analyses(analyses)
                 
                 status.text("Creating visualizations...")
@@ -340,4 +346,4 @@ async def main():
                 progress.empty()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
