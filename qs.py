@@ -16,52 +16,11 @@ import json
 from collections import Counter
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-import nltk
-import os
-import ssl
-import tempfile
+def tokenize_text(text):
+    """Simple tokenizer using basic punctuation."""
+    return [s.strip() + '.' for s in text.replace('!', '.').replace('?', '.').split('.') if s.strip()]
 
-def initialize_nltk():
-    """Initialize NLTK with robust error handling and fallback."""
-    def fallback_tokenizer(text):
-        """Simple fallback tokenizer using basic punctuation."""
-        return [s.strip() + '.' for s in text.replace('!', '.').replace('?', '.').split('.') if s.strip()]
-
-    try:
-        # First try to use existing NLTK data
-        try:
-            return nltk.tokenize.sent_tokenize
-        except (LookupError, AttributeError):
-            pass
-
-        # If that fails, try to download to temp directory
-        nltk_data_dir = os.path.join(tempfile.gettempdir(), 'nltk_data')
-        os.makedirs(nltk_data_dir, exist_ok=True)
-        nltk.data.path.insert(0, nltk_data_dir)  # Prioritize our temp directory
-
-        try:
-            import ssl
-            try:
-                _create_unverified_https_context = ssl._create_unverified_context
-            except AttributeError:
-                pass
-            else:
-                ssl._create_default_https_context = _create_unverified_https_context
-        except ImportError:
-            pass
-
-        try:
-            nltk.download('punkt', download_dir=nltk_data_dir, quiet=True)
-            return nltk.tokenize.sent_tokenize
-        except Exception as e:
-            st.warning(f"NLTK download failed: {str(e)}. Using fallback tokenizer.")
-            return fallback_tokenizer
-
-    except Exception as e:
-        st.warning(f"NLTK initialization failed: {str(e)}. Using fallback tokenizer.")
-        return fallback_tokenizer
-
-tokenizer = initialize_nltk()
+tokenizer = tokenize_text
 
 @st.cache_data(ttl=3600)
 def extract_text(file_content, file_type):
