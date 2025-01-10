@@ -1,0 +1,12 @@
+streamlit
+openai
+pandas
+numpy
+plotly
+networkx
+wordcloud
+PyPDF2
+python-docx
+matplotlib
+nltk
+xlsxwriter
