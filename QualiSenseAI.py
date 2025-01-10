@@ -256,13 +256,8 @@ def create_empty_figure(message="No data available"):
     )
 
 def main():
-    st.set_page_config(
-        page_title="QualiSense-AI",
-        page_icon="🔍",
-        layout="wide"
-    )
+    st.title("QualiSense-AI")
     
-    # Custom CSS for professional appearance
     st.markdown("""
         <style>
         .main { padding: 2rem; }
@@ -278,9 +273,7 @@ def main():
             border-left: 5px solid #1E3D59;
             margin-bottom: 2rem;
         }
-        .st-emotion-cache-1v0mbdj > img {
-            width: 100px;
-        }
+        .st-emotion-cache-1v0mbdj > img { width: 100px; }
         .upload-section {
             margin-top: 2rem;
             padding: 1.5rem;
@@ -297,9 +290,6 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
-    # Header and Description
-    st.title("QualiSense-AI")
-    
     st.markdown("""
         <div class='info-box'>
         <h2>Advanced Qualitative Data Analysis Platform</h2>
@@ -313,7 +303,6 @@ def main():
         </div>
     """, unsafe_allow_html=True)
     
-    # Main content in columns
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -374,7 +363,6 @@ def main():
             status = st.empty()
             
             try:
-                # Process files
                 texts = []
                 for idx, file in enumerate(uploaded_files):
                     if file.size > 12 * 1024 * 1024:
@@ -387,7 +375,6 @@ def main():
                 status.text("🔍 Analyzing content...")
                 progress.progress(0.4)
                 
-                # Run analysis
                 async def run_analysis():
                     analyses = await analyze_chunks(client, chunks)
                     return analyses
@@ -395,7 +382,6 @@ def main():
                 analyses = asyncio.run(run_analysis())
                 progress.progress(0.7)
                 
-                # Process results
                 code_data, relationship_data, co_occurrence = merge_analyses(analyses)
                 
                 status.text("📊 Creating visualizations...")
@@ -403,7 +389,6 @@ def main():
                 
                 visualizations = create_visualizations(code_data, relationship_data, co_occurrence, "\n".join(texts))
                 
-                # Display results in tabs
                 tabs = st.tabs([
                     "📊 Code Distribution",
                     "🎯 Theme Analysis",
@@ -419,7 +404,6 @@ def main():
                         else:
                             st.plotly_chart(viz, use_container_width=True)
                 
-                # Create downloadable report
                 with io.BytesIO() as buffer:
                     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                         code_data.to_excel(writer, 'Coding Analysis', index=False)
@@ -454,4 +438,5 @@ def main():
                 progress.empty()
 
 if __name__ == "__main__":
+    st.set_page_config(page_title="QualiSense-AI", page_icon="🔍", layout="wide")
     main()
