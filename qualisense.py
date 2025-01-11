@@ -21,14 +21,13 @@ from concurrent.futures import ThreadPoolExecutor
 st.markdown("""
 <style>
     .app-title {
-    background-color: #0070ba;
-    color: white;
+    background-color: rgba(33, 150, 243, 0.3);
     padding: 10px 20px;
     border-radius: 8px;
     display: inline-block;
     margin-bottom: 20px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 112, 186, 0.4);
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
 }
     
     .donate-button {
